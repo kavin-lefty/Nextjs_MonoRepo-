@@ -1,29 +1,46 @@
 "use client";
 import { useState } from "react";
 import { Form, Input, Button, message } from "antd";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+
+interface CreateUserPayload {
+  strEmail: string;
+  strName: string;
+  strPassword: string;
+}
 
 export default function AddUser() {
   const [loading, setLoading] = useState(false);
-
-  const onFinish = async (values: any) => {
+  const [messageApi, contextHolder] = message.useMessage();
+  const router = useRouter();
+  const onFinish = async (values: CreateUserPayload) => {
     setLoading(true);
-    try {
-      const res = await fetch("/api/user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+    axios
+      .post("/api/user", values)
+      .then((res) => {
+        console.log(res.data);
+        if (res.status === 200) {
+          setLoading(false);
+          messageApi.open({
+            type: "error",
+            duration: 5,
+            content: res.data.strMessage,
+          });
+          router.push("/dashboard");
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        if (err) {
+          setLoading(false);
+          messageApi.open({
+            type: "error",
+            duration: 5,
+            content: err.response.data.strMessage,
+          });
+        }
       });
-      const data = await res.json();
-      if (res.ok) {
-        message.success("User added successfully!");
-      } else {
-        message.error(data.message || "Something went wrong");
-      }
-    } catch (err) {
-      message.error("Error adding user");
-    } finally {
-      setLoading(false);
-    }
   };
   return (
     <div style={{ maxWidth: 400, margin: "40px auto" }}>
@@ -39,9 +56,7 @@ export default function AddUser() {
         >
           <Input />
         </Form.Item>
-        <Form.Item name="strMobile" label="Mobile" rules={[{ required: true }]}>
-          <Input />
-        </Form.Item>
+
         <Form.Item
           name="strPassword"
           label="Password"
